@@ -1,0 +1,136 @@
+{
+  "wht_certificate_policy": {
+    "version": "EA_STANDARD_V1",
+    "default_pnd_mapping": {
+      "salary_employee": "PND1",
+      "salary_yearly_summary": "PND1K",
+      "service_individual": "PND3",
+      "service_company": "PND53",
+      "rent_individual": "PND3",
+      "rent_company": "PND53",
+      "advertising_individual": "PND3",
+      "advertising_company": "PND53",
+      "transport_individual": "PND3",
+      "transport_company": "PND53",
+      "professional_fee_individual": "PND3",
+      "professional_fee_company": "PND53",
+      "dividend": "PND2"
+    },
+    "default_wht_rate_mapping": {
+      "service": 3,
+      "rent": 5,
+      "advertising": 2,
+      "transport": 1,
+      "professional_fee": 3,
+      "interest": 1,
+      "dividend": 10
+    },
+    "dividend_suboption_policy": {
+      "default_wht_rate": 10,
+      "default_pnd_type": "PND2",
+      "line_oa_required_when_income_type_dividend": "incomeSubtype",
+      "suboptions": {
+        "credit_30": {
+          "official_case": "1.1",
+          "row": 30,
+          "label_th": "ได้รับเครดิตภาษี - กำไรสุทธิที่เสียภาษีนิติบุคคล 30%",
+          "default_wht_rate": 10,
+          "requires_accountant_confirmation": true
+        },
+        "credit_25": {
+          "official_case": "1.2",
+          "row": 31,
+          "label_th": "ได้รับเครดิตภาษี - กำไรสุทธิที่เสียภาษีนิติบุคคล 25%",
+          "default_wht_rate": 10,
+          "requires_accountant_confirmation": true
+        },
+        "credit_20": {
+          "official_case": "1.3",
+          "row": 32,
+          "label_th": "ได้รับเครดิตภาษี - กำไรสุทธิที่เสียภาษีนิติบุคคล 20%",
+          "default_wht_rate": 10,
+          "default_for_general_company_dividend_if_accountant_confirms_tax_credit": true
+        },
+        "credit_other": {
+          "official_case": "1.4",
+          "row": 33,
+          "label_th": "ได้รับเครดิตภาษี - อัตราอื่น",
+          "default_wht_rate": 10,
+          "requires_other_label": true,
+          "requires_accountant_confirmation": true
+        },
+        "no_credit_tax_exempt_profit": {
+          "official_case": "2.1",
+          "row": 35,
+          "label_th": "ไม่ได้รับเครดิตภาษี - กำไรสุทธิของกิจการที่ได้รับยกเว้น CIT",
+          "default_wht_rate": 10
+        },
+        "no_credit_excluded_income": {
+          "official_case": "2.2",
+          "row": 36,
+          "label_th": "ไม่ได้รับเครดิตภาษี - เงินปันผล/ส่วนแบ่งกำไรที่ได้รับยกเว้นไม่ต้องนำมารวมเป็นรายได้",
+          "default_wht_rate": 10
+        },
+        "no_credit_loss_carryforward": {
+          "official_case": "2.3",
+          "row": 38,
+          "label_th": "ไม่ได้รับเครดิตภาษี - กำไรสุทธิหลังหักผลขาดทุนสุทธิยกมาไม่เกิน 5 ปี",
+          "default_wht_rate": 10
+        },
+        "no_credit_equity_method": {
+          "official_case": "2.4",
+          "row": 40,
+          "label_th": "ไม่ได้รับเครดิตภาษี - กำไรที่รับรู้ทางบัญชีโดยวิธีส่วนได้เสีย",
+          "default_wht_rate": 10
+        },
+        "no_credit_other": {
+          "official_case": "2.5",
+          "row": 41,
+          "label_th": "ไม่ได้รับเครดิตภาษี - อื่น ๆ",
+          "default_wht_rate": 10,
+          "requires_other_label": true,
+          "requires_accountant_confirmation": true
+        }
+      }
+    },
+    "payment_condition": {
+      "default": "withhold",
+      "allowed_values": ["withhold", "pay_once", "pay_forever"],
+      "description": {
+        "withhold": "หักจากยอดที่จ่าย",
+        "pay_once": "บริษัทออกภาษีแทนครั้งเดียว",
+        "pay_forever": "บริษัทออกภาษีแทนตลอด"
+      }
+    },
+    "book_no_policy": {
+      "enabled": false,
+      "use_running_document_no": true,
+      "document_no_format": "WT{YYMM}-{RUNNING}",
+      "example": "WT2605-0001"
+    },
+    "stamp_policy": {
+      "enabled": true,
+      "mode": "archive_only",
+      "allowed_modes": ["all", "archive_only", "none"]
+    },
+    "filing_copies": {
+      "copy_1": {"name": "taxpayer_submit",  "description": "ผู้ถูกหักใช้แนบยื่นภาษี"},
+      "copy_2": {"name": "taxpayer_keep",    "description": "ผู้ถูกหักเก็บเป็นหลักฐาน"},
+      "copy_3": {"name": "revenue_attach",   "description": "แนบยื่นกรมสรรพากร"},
+      "copy_4": {"name": "company_archive",  "description": "บริษัทเก็บ"}
+    },
+    "erp_behavior": {
+      "auto_detect_pnd_type": true,
+      "auto_detect_wht_rate": true,
+      "allow_accountant_override": true,
+      "generate_pdf_all_copies": true,
+      "support_e_signature": true,
+      "support_company_stamp": true
+    },
+    "fields_need_manual_confirmation": [
+      {"field": "book_no_policy",        "reason": "ขึ้นกับ practice ของบริษัทและสำนักงานบัญชี"},
+      {"field": "stamp_policy",          "reason": "ขึ้นกับนโยบายเอกสารของบริษัท"},
+      {"field": "special_wht_exception", "reason": "บาง supplier หรือ transaction อาจมี exemption"}
+    ]
+  }
+}

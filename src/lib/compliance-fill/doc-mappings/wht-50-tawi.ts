@@ -1,6 +1,7 @@
 import { readFile } from 'fs/promises';
 import { bahtTextForCertificate } from '../baht-text';
 import { renderPdfFromXlsx } from '../pdf-from-xlsx';
+import { DIVIDEND_RULES, type DividendSubOption } from './wht-50-tawi-dividend-rules';
 import {
   getRequiredWorksheet,
   loadWorkbookTemplate,
@@ -41,6 +42,7 @@ export type WhtData = {
   sequenceNo: number;
   pndType?: PndType | string;
   incomeType: IncomeType;
+  incomeSubtype?: DividendSubOption | string;
   incomeTypeOther?: string;
   paymentDate: Date | string;
   baseAmount: number;
@@ -126,7 +128,7 @@ export async function fillWht50Tawi(data: WhtData): Promise<FilledComplianceDocu
   const templatePath = resolveEaMiniAppPath('templates', TEMPLATE_FILE);
   const workbook = await loadWorkbookTemplate(templatePath);
   const worksheet = getRequiredWorksheet(workbook, WHT_SHEET_NAME);
-  const row = INCOME_ROWS[normalized.incomeType];
+  const row = resolveIncomeRow(normalized);
   const whtAmount = roundTo2(normalized.baseAmount * (normalized.whtRate / 100));
 
   clearTemplateExampleCells(worksheet);
@@ -141,7 +143,7 @@ export async function fillWht50Tawi(data: WhtData): Promise<FilledComplianceDocu
     { cell: 'P12', value: normalized.payeeTaxId ? formatTaxId(normalized.payeeTaxId) : '- ---- ----- -- -' },
     { cell: 'C12', value: withTypePrefix(normalized.payeeType, normalized.payeeName) },
     { cell: 'C14', value: normalized.payeeAddress },
-    { cell: 'H16', value: String(normalized.sequenceNo) },
+    { cell: 'B16', value: String(normalized.sequenceNo) },
     { cell: PND_X_MARK_CELLS[normalized.pndType], value: 'X' },
     { cell: `M${row}`, value: formatThaiDate(normalized.paymentDate) },
     { cell: `O${row}`, value: normalized.baseAmount },
@@ -216,6 +218,13 @@ function validateWhtData(data: NormalizedWhtData): void {
   if (data.paymentCondition === 'other' && !data.paymentConditionOther) {
     errors.push('ระบุเงื่อนไขการจ่ายอื่นๆ');
   }
+  if (data.incomeType === 'dividend' && !resolveDividendRule(data.incomeSubtype)) {
+    errors.push('เลือกประเภทเงินปันผล 40(4)(ข) เช่น credit_20 หรือ no_credit_equity_method');
+  }
+  const dividendRule = data.incomeType === 'dividend' ? resolveDividendRule(data.incomeSubtype) : undefined;
+  if (dividendRule?.requiresOtherLabel && !data.incomeTypeOther) {
+    errors.push('ระบุรายละเอียดเพิ่มเติมของเงินปันผลกรณีอัตราอื่น/อื่นๆ');
+  }
 
   if (errors.length > 0) {
     throw new Error(errors.join('; '));
@@ -223,7 +232,13 @@ function validateWhtData(data: NormalizedWhtData): void {
 }
 
 function clearTemplateExampleCells(worksheet: { getCell: (cell: string) => { value: unknown } }): void {
-  for (const cell of [...Object.values(PND_X_MARK_CELLS), 'M23', 'O23', 'Q23', 'M45', 'O45', 'Q45', 'M46', 'O46', 'Q46']) {
+  const incomeCells = Array.from({ length: 24 }, (_, index) => index + 23).flatMap((row) => [
+    `M${row}`,
+    `O${row}`,
+    `Q${row}`,
+  ]);
+
+  for (const cell of [...Object.values(PND_X_MARK_CELLS), ...incomeCells]) {
     worksheet.getCell(cell).value = null;
   }
 }
@@ -231,6 +246,14 @@ function clearTemplateExampleCells(worksheet: { getCell: (cell: string) => { val
 function writeIncomeLabel(worksheet: { getCell: (cell: string) => { value: unknown } }, data: NormalizedWhtData): void {
   if (data.incomeType === 'other' && data.incomeTypeOther) {
     worksheet.getCell('E46').value = data.incomeTypeOther;
+    return;
+  }
+
+  if (data.incomeType === 'dividend') {
+    const dividendRule = resolveDividendRule(data.incomeSubtype);
+    if (dividendRule?.requiresOtherLabel && data.incomeTypeOther) {
+      worksheet.getCell(dividendRule.row === 33 ? 'E33' : 'E41').value = data.incomeTypeOther;
+    }
     return;
   }
 
@@ -278,6 +301,7 @@ function derivePndPolicyKey(data: WhtData): string {
   if (data.incomePolicyKey) return data.incomePolicyKey;
 
   if (data.incomeType === 'salary') return 'salary_yearly_summary';
+  if (data.incomeType === 'dividend') return 'dividend';
 
   const partyType = data.payeeType === 'บุคคล' ? 'individual' : 'company';
   const income = data.incomeType === 'other' ? 'service' : data.incomeType;
@@ -291,6 +315,19 @@ function deriveRatePolicyKey(data: WhtData): string {
   if (data.incomeType === 'royalty' || data.incomeType === 'commission') return 'service';
   if (data.incomeType === 'salary') return 'service';
   return data.incomeType;
+}
+
+function resolveIncomeRow(data: Pick<NormalizedWhtData, 'incomeType' | 'incomeSubtype'>): number {
+  if (data.incomeType === 'dividend') {
+    return resolveDividendRule(data.incomeSubtype)?.row ?? INCOME_ROWS.dividend;
+  }
+
+  return INCOME_ROWS[data.incomeType];
+}
+
+function resolveDividendRule(value?: string): (typeof DIVIDEND_RULES)[DividendSubOption] | undefined {
+  if (!value) return undefined;
+  return DIVIDEND_RULES[value as DividendSubOption];
 }
 
 function normalizePndType(value: string | undefined): PndType {
